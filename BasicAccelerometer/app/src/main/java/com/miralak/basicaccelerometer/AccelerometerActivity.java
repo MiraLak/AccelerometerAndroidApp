@@ -6,27 +6,23 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicResponseHandler;
-import org.apache.http.impl.client.DefaultHttpClient;
+import com.miralak.basicaccelerometer.api.CassandraRestApi;
+import com.miralak.basicaccelerometer.model.Acceleration;
 
-import java.io.IOException;
+
+import retrofit.RestAdapter;
 
 
 public class AccelerometerActivity extends ActionBarActivity implements SensorEventListener{
 
+    public static final String URL = "http://myURL"; //TODO set the REST API URL
     Sensor accelerometer;
     SensorManager sm;
     TextView acceleration;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,10 +60,46 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        acceleration.setText("X:"+event.values[0]+
-        "\nY:"+event.values[1]+
-        "\nZ:"+event.values[2]+
-        "\nTimestamp:"+event.timestamp);
+        float x_value = event.values[0];
+        float y_value = event.values[1];
+        float z_value = event.values[2];
+        long timestamp = event.timestamp;
+        acceleration.setText("X:"+ x_value +
+        "\nY:"+ y_value +
+        "\nZ:"+ z_value +
+        "\nTimestamp:"+ timestamp);
+
+        //Post values ton a REST Api
+        postToRestApi(x_value,y_value,z_value,timestamp);
+    }
+
+    /**
+     * POST acceleration value to a REST API which will store them.
+     * The REST API request sample used is:
+     *
+     * Header Content-Type must be set: application/json
+     * Body:
+     * {
+     *  "date": 1428773040488,
+     *  "x": 0.98,
+     *  "y": 6.43,
+     *  "z": 9.01,
+     * }
+     *returned status: 201 CREATED
+     *
+     * @param x_value
+     * @param y_value
+     * @param z_value
+     * @param timestamp
+     */
+    private void postToRestApi(float x_value, float y_value, float z_value, long timestamp) {
+
+        RestAdapter restAdapter = new RestAdapter.Builder()
+                .setEndpoint(URL)
+                .build();
+
+        CassandraRestApi cassandraRestApi = restAdapter.create(CassandraRestApi.class);
+        cassandraRestApi.sendAccelerationValues(new Acceleration(x_value,y_value,z_value,timestamp));
     }
 
 

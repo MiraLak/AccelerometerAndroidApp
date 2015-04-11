@@ -4,6 +4,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -19,10 +20,17 @@ import retrofit.RestAdapter;
 
 public class AccelerometerActivity extends ActionBarActivity implements SensorEventListener{
 
-    public static final String URL = "http://myURL"; //TODO set the REST API URL
+    public static final String URL = "http://192.168.1.17:8080/accelerometer-api/"; //TODO set the REST API URL
     Sensor accelerometer;
     SensorManager sm;
     TextView acceleration;
+
+    float x_value;
+    float y_value;
+    float z_value;
+    long timestamp;
+
+    CassandraRestApi cassandraRestApi;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,6 +41,12 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
         sm.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
 
         acceleration = (TextView) findViewById(R.id.acceleration);
+
+        RestAdapter restAdapter = new RestAdapter.Builder()
+                .setEndpoint(URL)
+                .build();
+
+        cassandraRestApi = restAdapter.create(CassandraRestApi.class);
     }
 
 
@@ -60,17 +74,37 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        float x_value = event.values[0];
-        float y_value = event.values[1];
-        float z_value = event.values[2];
-        long timestamp = event.timestamp;
+        x_value = event.values[0];
+        y_value = event.values[1];
+        z_value = event.values[2];
+        timestamp = event.timestamp;
         acceleration.setText("X:"+ x_value +
         "\nY:"+ y_value +
         "\nZ:"+ z_value +
         "\nTimestamp:"+ timestamp);
 
-        //Post values ton a REST Api
-        postToRestApi(x_value,y_value,z_value,timestamp);
+        new myTask().execute();
+
+    }
+
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        //Do nothing
+    }
+
+
+    /**
+     * Asyncronous task to post request to a Rest API.
+     */
+    private class myTask extends AsyncTask<Void, Void, Void>{
+
+        @Override
+        protected Void doInBackground(Void... params) {
+             //Post values ton a REST Api
+             postToRestApi(x_value,y_value,z_value,timestamp);
+            return null;
+        }
     }
 
     /**
@@ -79,12 +113,15 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
      *
      * Header Content-Type must be set: application/json
      * Body:
-     * {
+     * {acceleration:
+     *  {
      *  "date": 1428773040488,
      *  "x": 0.98,
      *  "y": 6.43,
      *  "z": 9.01,
+     *  }
      * }
+     *
      *returned status: 201 CREATED
      *
      * @param x_value
@@ -93,18 +130,7 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
      * @param timestamp
      */
     private void postToRestApi(float x_value, float y_value, float z_value, long timestamp) {
-
-        RestAdapter restAdapter = new RestAdapter.Builder()
-                .setEndpoint(URL)
-                .build();
-
-        CassandraRestApi cassandraRestApi = restAdapter.create(CassandraRestApi.class);
-        cassandraRestApi.sendAccelerationValues(new Acceleration(x_value,y_value,z_value,timestamp));
+        cassandraRestApi.sendAccelerationValues(new Acceleration(x_value, y_value, z_value, timestamp));
     }
 
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        //Do nothing
-    }
 }

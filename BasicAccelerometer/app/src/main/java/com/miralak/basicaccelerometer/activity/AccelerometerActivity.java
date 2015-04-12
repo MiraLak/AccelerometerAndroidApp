@@ -1,4 +1,4 @@
-package com.miralak.basicaccelerometer;
+package com.miralak.basicaccelerometer.activity;
 
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -9,8 +9,11 @@ import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
+import com.miralak.basicaccelerometer.R;
 import com.miralak.basicaccelerometer.api.CassandraRestApi;
 import com.miralak.basicaccelerometer.model.Acceleration;
 
@@ -20,15 +23,14 @@ import retrofit.RestAdapter;
 
 public class AccelerometerActivity extends ActionBarActivity implements SensorEventListener{
 
-    public static final String URL = "http://192.168.1.17:8080/accelerometer-api/"; //TODO set the REST API URL
-    Sensor accelerometer;
-    SensorManager sm;
-    TextView acceleration;
-
-    float x_value;
-    float y_value;
-    float z_value;
-    long timestamp;
+    private String restURL = "http://192.168.1.17:8080/accelerometer-api/";
+    private Sensor accelerometer;
+    private SensorManager sm;
+    private TextView acceleration;
+    private float x_value;
+    private float y_value;
+    private float z_value;
+    private long timestamp;
 
     CassandraRestApi cassandraRestApi;
 
@@ -42,11 +44,25 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
 
         acceleration = (TextView) findViewById(R.id.acceleration);
 
+        Bundle extras = getIntent().getExtras();
+        if(extras !=null) {
+            restURL = extras.getString(StartActivity.URL).toString();
+        }
+
         RestAdapter restAdapter = new RestAdapter.Builder()
-                .setEndpoint(URL)
+                .setEndpoint(restURL)
                 .build();
 
         cassandraRestApi = restAdapter.create(CassandraRestApi.class);
+
+        Button myButton = (Button) findViewById(R.id.button_exit);
+        myButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+                System.exit(0);
+            }
+        });
     }
 
 
@@ -101,8 +117,12 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
 
         @Override
         protected Void doInBackground(Void... params) {
-             //Post values ton a REST Api
-             postToRestApi(x_value,y_value,z_value,timestamp);
+            try{
+                //Post values ton a REST Api
+                postToRestApi(x_value,y_value,z_value,timestamp);
+            }catch(Exception e){
+                e.printStackTrace();
+            }
             return null;
         }
     }

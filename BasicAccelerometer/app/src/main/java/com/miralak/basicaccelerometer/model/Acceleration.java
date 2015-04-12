@@ -1,8 +1,5 @@
 package com.miralak.basicaccelerometer.model;
 
-
-import android.util.Log;
-
 public class Acceleration {
 
     private long timestamp;
@@ -15,7 +12,6 @@ public class Acceleration {
         y= new Double(""+y_value);
         z= new Double(""+z_value);
         this.timestamp = timestamp;
-
     }
 
     public long getTimestamp() {
@@ -33,5 +29,4 @@ public class Acceleration {
     public double getZ() {
         return z;
     }
-
 }

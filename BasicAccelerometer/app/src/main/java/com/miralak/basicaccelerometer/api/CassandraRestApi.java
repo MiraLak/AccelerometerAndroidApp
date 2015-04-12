@@ -6,7 +6,6 @@ import retrofit.client.Response;
 import retrofit.http.Body;
 import retrofit.http.POST;
 
-
 public interface CassandraRestApi {
 
     @POST("/acceleration")

@@ -5,8 +5,8 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.AsyncTask;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -17,22 +17,18 @@ import com.miralak.basicaccelerometer.R;
 import com.miralak.basicaccelerometer.api.CassandraRestApi;
 import com.miralak.basicaccelerometer.model.Acceleration;
 
+import java.util.Date;
 
 import retrofit.RestAdapter;
 
-
 public class AccelerometerActivity extends ActionBarActivity implements SensorEventListener{
 
-    private String restURL = "http://192.168.1.17:8080/accelerometer-api/";
-    private Sensor accelerometer;
-    private SensorManager sm;
+    private String restURL;
     private TextView acceleration;
-    private float x_value;
-    private float y_value;
-    private float z_value;
-    private long timestamp;
+    private CassandraRestApi cassandraRestApi;
 
-    CassandraRestApi cassandraRestApi;
+    private SensorManager sm;
+    private Sensor accelerometer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,13 +36,13 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
         setContentView(R.layout.activity_accelerometer);
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
         accelerometer = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        sm.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        startSensor();
 
         acceleration = (TextView) findViewById(R.id.acceleration);
 
         Bundle extras = getIntent().getExtras();
-        if(extras !=null) {
-            restURL = extras.getString(StartActivity.URL).toString();
+        if (extras != null) {
+            restURL = extras.getString(StartActivity.URL);
         }
 
         RestAdapter restAdapter = new RestAdapter.Builder()
@@ -59,12 +55,25 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
         myButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                stopSensor();
                 finish();
-                System.exit(0);
             }
         });
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        startSensor();
+    }
+
+    private void startSensor() {
+        sm.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    private void stopSensor() {
+        sm.unregisterListener(this);
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -90,67 +99,41 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        x_value = event.values[0];
-        y_value = event.values[1];
-        z_value = event.values[2];
-        timestamp = event.timestamp;
-        acceleration.setText("X:"+ x_value +
-        "\nY:"+ y_value +
-        "\nZ:"+ z_value +
-        "\nTimestamp:"+ timestamp);
-
-        new myTask().execute();
-
+        Acceleration capturedAcceleration = getAccelerationFromSensor(event);
+        updateTextView(capturedAcceleration);
+        new SendAccelerationAsyncTask().execute(capturedAcceleration);
     }
 
+    private void updateTextView(Acceleration capturedAcceleration) {
+        acceleration.setText("X:" + capturedAcceleration.getX() +
+                "\nY:" + capturedAcceleration.getY() +
+                "\nZ:" + capturedAcceleration.getZ() +
+                "\nTimestamp:" + capturedAcceleration.getTimestamp());
+    }
+
+    private Acceleration getAccelerationFromSensor(SensorEvent event) {
+        long timestamp = (new Date()).getTime() + (event.timestamp - System.nanoTime()) / 1000000L;
+        return new Acceleration(event.values[0], event.values[1], event.values[2], timestamp);
+    }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
         //Do nothing
     }
 
-
     /**
      * Asyncronous task to post request to a Rest API.
      */
-    private class myTask extends AsyncTask<Void, Void, Void>{
+    private class SendAccelerationAsyncTask extends AsyncTask<Acceleration, Void, Void>{
 
         @Override
-        protected Void doInBackground(Void... params) {
-            try{
-                //Post values ton a REST Api
-                postToRestApi(x_value,y_value,z_value,timestamp);
-            }catch(Exception e){
+        protected Void doInBackground(Acceleration... params) {
+            try {
+                cassandraRestApi.sendAccelerationValues(params[0]);
+            } catch(Exception e) {
                 e.printStackTrace();
             }
             return null;
         }
     }
-
-    /**
-     * POST acceleration value to a REST API which will store them.
-     * The REST API request sample used is:
-     *
-     * Header Content-Type must be set: application/json
-     * Body:
-     * {acceleration:
-     *  {
-     *  "date": 1428773040488,
-     *  "x": 0.98,
-     *  "y": 6.43,
-     *  "z": 9.01,
-     *  }
-     * }
-     *
-     *returned status: 201 CREATED
-     *
-     * @param x_value
-     * @param y_value
-     * @param z_value
-     * @param timestamp
-     */
-    private void postToRestApi(float x_value, float y_value, float z_value, long timestamp) {
-        cassandraRestApi.sendAccelerationValues(new Acceleration(x_value, y_value, z_value, timestamp));
-    }
-
 }

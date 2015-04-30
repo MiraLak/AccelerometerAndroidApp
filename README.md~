@@ -13,6 +13,5 @@ Each acceleration contains:
 Android Studio https://developer.android.com/sdk/index.html
 
 # Start the application
-You can install the app into you Android phone (4.0.3 version and above).
-Before installing the app, you'll have to start the REST API.
-You will need the REST API URL to post data.
+Before installing the app, you'll have to update the REST API URL and request.
+Then you can install the app into you Android phone (4.0.3 version and above).

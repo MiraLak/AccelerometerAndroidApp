@@ -21,8 +21,8 @@ public class StartActivity extends ActionBarActivity {
 
         restURL = (EditText) findViewById(R.id.editURL);
 
-        Button myButton = (Button) findViewById(R.id.button_start);
-        myButton.setOnClickListener(new View.OnClickListener() {
+        final Button myStartButton = (Button) findViewById(R.id.button_start);
+        myStartButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent();
@@ -31,5 +31,18 @@ public class StartActivity extends ActionBarActivity {
                 startActivity(intent);
             }
         });
+
+        Button myCollectButton = (Button) findViewById(R.id.button_collect);
+        myCollectButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent();
+                intent.setClass(StartActivity.this, CollectDataActivity.class);
+                intent.putExtra(URL, restURL.getText().toString());
+                startActivity(intent);
+            }
+        });
+
+
     }
 }

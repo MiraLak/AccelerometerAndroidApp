@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Back to menu"
+        android:id="@+id/button_collect_exit"
+        android:layout_gravity="right"
+        android:layout_weight="0.09" />
+
+    <TextView
+        android:layout_width="370dp"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Saisir votre nom"
+        android:id="@+id/userID_label"
+        android:layout_weight="0.05" />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textPersonName"
+        android:ems="10"
+        android:id="@+id/userID"
+        android:layout_weight="0.02" />
+
+    <Spinner
+        android:layout_width="340dp"
+        android:layout_height="53dp"
+        android:id="@+id/spinner_activity"
+        android:layout_gravity="center_horizontal"
+        android:spinnerMode="dropdown"
+        android:layout_weight="0.69" />
+
+    <TextView
+        android:layout_width="372dp"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="X: Y: Z: Timestamp:"
+        android:id="@+id/acceleration"
+        android:layout_below="@+id/textView"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="31dp"
+        android:layout_weight="0.57" />
+
+
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start "
+        android:id="@+id/button_start_training"
+        android:layout_gravity="center_horizontal"
+        android:layout_weight="0.19" />
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="73dp"
+        android:text="Stop"
+        android:id="@+id/button_stop_training" />
+
+</LinearLayout>

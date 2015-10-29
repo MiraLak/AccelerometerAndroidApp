@@ -38,4 +38,10 @@
         android:id="@+id/button_start"
         android:layout_weight="0.07"
         android:layout_marginTop="50dp" />
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Collect data"
+        android:id="@+id/button_collect" />
 </LinearLayout>

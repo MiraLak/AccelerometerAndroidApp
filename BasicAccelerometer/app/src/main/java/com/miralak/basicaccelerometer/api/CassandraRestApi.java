@@ -10,11 +10,11 @@ import retrofit.http.POST;
 public interface CassandraRestApi {
 
     @POST("/acceleration")
-    public Response sendAccelerationValues(@Body Acceleration acceleration);
+    Response sendAccelerationValues(@Body Acceleration acceleration);
 
 
     @POST("/training")
-    public Response sendTrainingAccelerationValues(@Body TrainingAcceleration trainingAcceleration);
+    Response sendTrainingAccelerationValues(@Body TrainingAcceleration trainingAcceleration);
 
 
 }

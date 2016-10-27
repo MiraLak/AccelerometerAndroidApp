@@ -7,18 +7,21 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="69dp"
-        android:text="Welcome to Accelerometer!"
+        android:text="Welcome to Accelerometer data collector!"
         android:id="@+id/welcomeMessage"
         android:layout_gravity="center_horizontal|top"
         android:layout_marginTop="20dp"
         android:textSize="28dp"
-        android:textIsSelectable="false" />
+        android:textIsSelectable="false"
+        android:elegantTextHeight="true"
+        android:singleLine="false"
+        android:textAlignment="center" />
 
     <TextView
         android:layout_width="351dp"
         android:layout_height="46dp"
         android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Please enter Rest Api URL:"
+        android:text="Please enter Rest server URL:"
         android:id="@+id/urlEditLabel"
         android:layout_gravity="left|center_vertical"
         android:layout_marginTop="50dp" />
@@ -34,7 +37,7 @@
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Start"
+        android:text="Collect prediction data"
         android:id="@+id/button_start"
         android:layout_weight="0.07"
         android:layout_marginTop="50dp" />
@@ -42,6 +45,6 @@
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Collect data"
+        android:text="Collect training data"
         android:id="@+id/button_collect" />
 </LinearLayout>

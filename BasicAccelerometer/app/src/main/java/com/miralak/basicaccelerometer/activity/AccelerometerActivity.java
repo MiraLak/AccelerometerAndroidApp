@@ -1,84 +1,59 @@
 package com.miralak.basicaccelerometer.activity;
 
+
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import com.miralak.basicaccelerometer.R;
 import com.miralak.basicaccelerometer.api.CassandraRestApi;
+import com.miralak.basicaccelerometer.api.CassandraRestApiClient;
 import com.miralak.basicaccelerometer.model.Acceleration;
 
 import java.util.Date;
 
-import retrofit.RestAdapter;
+import duchess.fr.basicaccelerometer.R;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
-public class AccelerometerActivity extends ActionBarActivity implements SensorEventListener{
-
-    private String restURL;
-    private TextView acceleration;
-    private Button myStartButton;
-    private Button myStopButton;
+public class AccelerometerActivity extends AppCompatActivity implements SensorEventListener {
+    private static final String DEFAULT_URL = "http://localhost:8080";
 
     private CassandraRestApi cassandraRestApi;
 
     private SensorManager sm;
-    private Sensor accelerometer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_accelerometer);
-        acceleration = (TextView) findViewById(R.id.acceleration);
-
-        //Init accelerometer sensor
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
-        accelerometer = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         initRestApi();
         initActionButtons();
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-    }
-
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_accelerometer, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+    public void onBackPressed() {
+        super.onBackPressed();
+        stopSensor();
+        finish();
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         Acceleration capturedAcceleration = getAccelerationFromSensor(event);
         updateTextView(capturedAcceleration);
-        new SendAccelerationAsyncTask().execute(capturedAcceleration);
+        sendDataToCassandra(capturedAcceleration);
     }
 
     @Override
@@ -90,51 +65,39 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
      * Init REST api to post data.
      */
     private void initRestApi() {
-        Bundle extras = getIntent().getExtras();
-        if (extras != null) {
-            restURL = extras.getString(StartActivity.URL);
-        }
+        SharedPreferences sharedpreferences = getSharedPreferences(ConfigurationActivity.MY_CONFIG, Context.MODE_PRIVATE);
+        String restURL = sharedpreferences.getString(ConfigurationActivity.URL, DEFAULT_URL);
 
-        RestAdapter restAdapter = new RestAdapter.Builder()
-                .setEndpoint(restURL)
-                .build();
-
-        cassandraRestApi = restAdapter.create(CassandraRestApi.class);
+        cassandraRestApi = CassandraRestApiClient.getClient(restURL).create(CassandraRestApi.class);
     }
 
     /**
      * Init start and stop buttons actions.
      */
     private void initActionButtons() {
-        myStartButton = (Button) findViewById(R.id.button_start);
-        myStopButton = (Button) findViewById(R.id.button_stop);
+        Button myStartButton = (Button) findViewById(R.id.button_start);
+        Button myStopButton = (Button) findViewById(R.id.button_stop);
 
         myStartButton.setVisibility(View.VISIBLE);
         myStopButton.setVisibility(View.GONE);
 
         //Start button action on click
-        myStartButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startSensor();
-                myStartButton.setVisibility(View.GONE);
-                myStopButton.setVisibility(View.VISIBLE);
-            }
+        myStartButton.setOnClickListener(v -> {
+            startSensor();
+            myStartButton.setVisibility(View.GONE);
+            myStopButton.setVisibility(View.VISIBLE);
         });
 
         //Stop button action on click
-        myStopButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                stopSensor();
-                myStartButton.setVisibility(View.VISIBLE);
-                myStopButton.setVisibility(View.GONE);
-                finish();
-            }
+        myStopButton.setOnClickListener(v -> {
+            stopSensor();
+            myStartButton.setVisibility(View.VISIBLE);
+            myStopButton.setVisibility(View.GONE);
         });
     }
 
     private void startSensor() {
+        Sensor accelerometer = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         sm.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
@@ -144,9 +107,11 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
 
     /**
      * Update acceleration text view with new values.
+     *
      * @param capturedAcceleration
      */
     private void updateTextView(Acceleration capturedAcceleration) {
+        TextView acceleration = (TextView) findViewById(R.id.acceleration);
         acceleration.setText("X:" + capturedAcceleration.getX() +
                 "\nY:" + capturedAcceleration.getY() +
                 "\nZ:" + capturedAcceleration.getZ() +
@@ -155,6 +120,7 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
 
     /**
      * Get accelerometer sensor values and map it into an acceleration model.
+     *
      * @param event
      * @return an acceleration model.
      */
@@ -167,16 +133,22 @@ public class AccelerometerActivity extends ActionBarActivity implements SensorEv
     /**
      * Asyncronous task to post request to a Rest API.
      */
-    private class SendAccelerationAsyncTask extends AsyncTask<Acceleration, Void, Void>{
+    private void sendDataToCassandra(Acceleration capturedAcceleration) {
 
-        @Override
-        protected Void doInBackground(Acceleration... params) {
-            try {
-                cassandraRestApi.sendAccelerationValues(params[0]);
-            } catch(Exception e) {
-                e.printStackTrace();
+        Call<Void> call = cassandraRestApi.sendAccelerationValues(capturedAcceleration);
+        call.enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (!response.isSuccessful()) {
+                    Toast.makeText(getBaseContext(), getText(R.string.rest_error), Toast.LENGTH_LONG).show();
+                }
             }
-            return null;
-        }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(getBaseContext(), getText(R.string.rest_failure), Toast.LENGTH_LONG).show();
+            }
+        });
     }
 }
+

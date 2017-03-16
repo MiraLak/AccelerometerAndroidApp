@@ -1,6 +1,5 @@
 package com.miralak.basicaccelerometer.model;
 
-
 public class TrainingAcceleration {
 
     private String userID;

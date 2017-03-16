@@ -1,8 +1,6 @@
 package com.miralak.basicaccelerometer.model;
 
-
 public enum ActivityType {
-
     WALKING("Walking"),
     JOGGING("Jogging"),
     STANDING("Standing"),

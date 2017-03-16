@@ -1,6 +1,20 @@
 <resources>
     <string name="app_name">BasicAccelerometer</string>
-
-    <string name="welcome">Welcome to the Basic Accelerometer!</string>
-    <string name="action_settings">Settings</string>
+    <string name="info_configuration_saved">Configuration saved!</string>
+    <string name="rest_error">Error in Rest Response</string>
+    <string name="rest_failure">Rest failure</string>
+    <string name="save">Save</string>
+    <string name="rest_url">REST url</string>
+    <string name="enter_your_name">Enter your name</string>
+    <string name="select_your_activity">Select your activity</string>
+    <string name="sensor_values">Sensor values :</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="x_y_z_timestamp">X: Y: Z: Timestamp:</string>
+    <string name="welcome_msg">Welcome to accelerometer app!</string>
+    <string name="collect_prediction_data">Collect prediction data</string>
+    <string name="collect_training_data">Collect training data</string>
+    <string name="configuration">Configuration</string>
+    <string name="data_collector_for_prediction">Data collector for prediction</string>
+    <string name="sensor_data">Sensor data:</string>
 </resources>

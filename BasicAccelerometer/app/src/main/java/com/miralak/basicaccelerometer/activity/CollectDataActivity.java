@@ -1,17 +1,17 @@
 package com.miralak.basicaccelerometer.activity;
 
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.os.Handler;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -19,9 +19,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import com.miralak.basicaccelerometer.R;
 import com.miralak.basicaccelerometer.api.CassandraRestApi;
+import com.miralak.basicaccelerometer.api.CassandraRestApiClient;
 import com.miralak.basicaccelerometer.model.Acceleration;
 import com.miralak.basicaccelerometer.model.ActivityType;
 import com.miralak.basicaccelerometer.model.TrainingAcceleration;
@@ -32,90 +33,58 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import retrofit.RestAdapter;
+import duchess.fr.basicaccelerometer.R;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
-public class CollectDataActivity extends ActionBarActivity implements SensorEventListener{
+public class CollectDataActivity extends AppCompatActivity implements SensorEventListener {
 
-    private String restURL;
+    private static final String DEFAULT_URL = "http://localhost:8080";
     private String userID;
     private String selectedActivity;
     private Timer timer;
     private TimerTask startTimerTask;
     private TimerTask stopTimerTask;
 
-    private TextView acceleration;
     private Spinner activitySpinner;
-    private ToneGenerator toneG;
-    private Button myStartButton;
-    private Button myStopButton;
 
     private CassandraRestApi cassandraRestApi;
 
     private SensorManager sm;
     private Sensor accelerometer;
 
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.collect_data);
-        acceleration = (TextView) findViewById(R.id.acceleration);
-        userID = ((EditText) findViewById(R.id.userID)).getText().toString();
+        setContentView(R.layout.activity_collect_data);
 
         //Init accelerometer sensor
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
         accelerometer = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        timer = new Timer();
 
         initActivitySpinner();
         initRestApi();
         initTimerTasksWithAlertSound();
         initActionButtons();
-
-        //Init an exit button
-        Button myBackButton = (Button) findViewById(R.id.button_collect_exit);
-        myBackButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                stopSensor();
-                startTimerTask.cancel();
-                stopTimerTask.cancel();
-                timer.cancel();
-                finish();
-            }
-        });
-
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_accelerometer, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+    public void onBackPressed() {
+        super.onBackPressed();
+        stopSensor();
+        startTimerTask.cancel();
+        stopTimerTask.cancel();
+        timer.cancel();
+        finish();
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         Acceleration capturedAcceleration = getAccelerationFromSensor(event);
         updateTextView(capturedAcceleration);
-        new SendAccelerationAsyncTask().execute(capturedAcceleration);
+        sendDataToCassandra(capturedAcceleration);
     }
 
     @Override
@@ -124,55 +93,55 @@ public class CollectDataActivity extends ActionBarActivity implements SensorEven
     }
 
     private void initActionButtons() {
-        myStartButton = (Button) findViewById(R.id.button_start_training);
-        myStopButton = (Button) findViewById(R.id.button_stop_training);
+        Button myStartButton = (Button) findViewById(R.id.button_start_training);
+        Button myStopButton = (Button) findViewById(R.id.button_stop_training);
 
         myStartButton.setVisibility(View.VISIBLE);
         myStopButton.setVisibility(View.GONE);
 
-        myStartButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                userID = ((EditText) findViewById(R.id.userID)).getText().toString();
-                selectedActivity = (String) activitySpinner.getSelectedItem();
+        myStartButton.setOnClickListener(v -> {
+            userID = ((EditText) findViewById(R.id.userID)).getText().toString();
+            selectedActivity = (String) activitySpinner.getSelectedItem();
 
-                myStartButton.setVisibility(View.GONE);
-                myStopButton.setVisibility(View.VISIBLE);
+            myStartButton.setVisibility(View.GONE);
+            myStopButton.setVisibility(View.VISIBLE);
 
-                //Sensor starts after 3 seconds
-                timer.schedule(startTimerTask, 3000);
+            //Sensor starts after 3 seconds
+            timer.schedule(startTimerTask, 3000);
 
-                //Sensor stops after 20 seconds
-                timer.schedule(stopTimerTask, 20000);
-            }
+            //Sensor stops after 20 seconds
+            timer.schedule(stopTimerTask, 20000);
+
         });
 
 
-        myStopButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                stopSensor();
-                startTimerTask.cancel();
-                stopTimerTask.cancel();
-                timer.cancel();
-                toneG.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 200);
+        myStopButton.setOnClickListener(v -> {
+            stopSensor();
+            startTimerTask.cancel();
+            stopTimerTask.cancel();
+            timer.cancel();
+            new ToneGenerator(AudioManager.STREAM_ALARM, 100).startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 200);
 
-                myStartButton.setVisibility(View.VISIBLE);
-                myStopButton.setVisibility(View.GONE);
+            myStartButton.setVisibility(View.VISIBLE);
+            myStopButton.setVisibility(View.GONE);
 
-                finish();
-            }
         });
     }
 
     private void initTimerTasksWithAlertSound() {
-        toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
-        timer = new Timer();
+        final Handler myHandler = new Handler();
+        final Runnable myRunnable = () -> {
+            Button myStartButton = (Button) findViewById(R.id.button_start_training);
+            Button myStopButton = (Button) findViewById(R.id.button_stop_training);
+
+            myStartButton.setVisibility(View.VISIBLE);
+            myStopButton.setVisibility(View.GONE);
+        };
 
         startTimerTask = new TimerTask() {
             @Override
             public void run() {
-                toneG.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
+                new ToneGenerator(AudioManager.STREAM_ALARM, 100).startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
                 startSensor();
             }
         };
@@ -180,38 +149,30 @@ public class CollectDataActivity extends ActionBarActivity implements SensorEven
         stopTimerTask = new TimerTask() {
             @Override
             public void run() {
-                toneG.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD);
+                new ToneGenerator(AudioManager.STREAM_ALARM, 100).startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD);
                 startTimerTask.cancel();
                 stopSensor();
-
-                myStartButton.setVisibility(View.VISIBLE);
-                myStopButton.setVisibility(View.GONE);
+                myHandler.post(myRunnable);
             }
         };
     }
 
     private void initRestApi() {
-        Bundle extras = getIntent().getExtras();
-        if (extras != null) {
-            restURL = extras.getString(StartActivity.URL);
-        }
+        SharedPreferences sharedpreferences = getSharedPreferences(ConfigurationActivity.MY_CONFIG, Context.MODE_PRIVATE);
+        String restURL = sharedpreferences.getString(ConfigurationActivity.URL, DEFAULT_URL);
 
-        RestAdapter restAdapter = new RestAdapter.Builder()
-                .setEndpoint(restURL)
-                .build();
-
-        cassandraRestApi = restAdapter.create(CassandraRestApi.class);
+        cassandraRestApi = CassandraRestApiClient.getClient(restURL).create(CassandraRestApi.class);
     }
 
     private void initActivitySpinner() {
         activitySpinner = (Spinner) findViewById(R.id.spinner_activity);
 
-        final List activityList = new ArrayList();
-        for(ActivityType activityType : ActivityType.values()){
+        final List<String> activityList = new ArrayList<>();
+        for (ActivityType activityType : ActivityType.values()) {
             activityList.add(activityType.getLabel());
         }
 
-        ArrayAdapter adapter = new ArrayAdapter(
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this,
                 android.R.layout.simple_spinner_item,
                 activityList
@@ -228,7 +189,7 @@ public class CollectDataActivity extends ActionBarActivity implements SensorEven
 
             @Override
             public void onNothingSelected(AdapterView<?> parentView) {
-                selectedActivity = activityList.get(0).toString();
+                selectedActivity = activityList.get(0);
             }
 
         });
@@ -244,6 +205,7 @@ public class CollectDataActivity extends ActionBarActivity implements SensorEven
 
 
     private void updateTextView(Acceleration capturedAcceleration) {
+        TextView acceleration = (TextView) findViewById(R.id.acceleration);
         acceleration.setText("X:" + capturedAcceleration.getX() +
                 "\nY:" + capturedAcceleration.getY() +
                 "\nZ:" + capturedAcceleration.getZ() +
@@ -258,23 +220,26 @@ public class CollectDataActivity extends ActionBarActivity implements SensorEven
     /**
      * Asyncronous task to post request to a Rest API.
      */
-    private class SendAccelerationAsyncTask extends AsyncTask<Acceleration, Void, Void> {
+    private void sendDataToCassandra(Acceleration capturedAcceleration) {
 
-        @Override
-        protected Void doInBackground(Acceleration... params) {
-            try {
-                TrainingAcceleration training = new TrainingAcceleration();
-                training.setAcceleration(params[0]);
-                training.setUserID(userID);
-                training.setActivity(selectedActivity);
+        TrainingAcceleration training = new TrainingAcceleration();
+        training.setAcceleration(capturedAcceleration);
+        training.setUserID(userID);
+        training.setActivity(selectedActivity);
 
-                cassandraRestApi.sendTrainingAccelerationValues(training);
-
-            } catch(Exception e) {
-
-                e.printStackTrace();
+        Call<Void> call = cassandraRestApi.sendTrainingAccelerationValues(training);
+        call.enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (!response.isSuccessful()) {
+                    Toast.makeText(getBaseContext(), getText(R.string.rest_error), Toast.LENGTH_LONG).show();
+                }
             }
-            return null;
-        }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(getBaseContext(), getText(R.string.rest_failure), Toast.LENGTH_LONG).show();
+            }
+        });
     }
 }

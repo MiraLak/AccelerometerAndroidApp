@@ -1,7 +1,6 @@
 package com.miralak.basicaccelerometer.model;
 
 public class Acceleration {
-
     private long timestamp;
     private double x;
     private double y;
@@ -30,3 +29,4 @@ public class Acceleration {
         return z;
     }
 }
+

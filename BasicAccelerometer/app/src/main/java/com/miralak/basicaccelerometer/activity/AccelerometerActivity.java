@@ -26,7 +26,6 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class AccelerometerActivity extends AppCompatActivity implements SensorEventListener {
-    private static final String DEFAULT_URL = "http://localhost:8080";
 
     private CassandraRestApi cassandraRestApi;
 
@@ -66,8 +65,7 @@ public class AccelerometerActivity extends AppCompatActivity implements SensorEv
      */
     private void initRestApi() {
         SharedPreferences sharedpreferences = getSharedPreferences(ConfigurationActivity.MY_CONFIG, Context.MODE_PRIVATE);
-        String restURL = sharedpreferences.getString(ConfigurationActivity.URL, DEFAULT_URL);
-
+        String restURL = sharedpreferences.getString(ConfigurationActivity.URL, ConfigurationActivity.DEFAULT_URL);
         cassandraRestApi = CassandraRestApiClient.getClient(restURL).create(CassandraRestApi.class);
     }
 
@@ -135,18 +133,18 @@ public class AccelerometerActivity extends AppCompatActivity implements SensorEv
      */
     private void sendDataToCassandra(Acceleration capturedAcceleration) {
 
+
         Call<Void> call = cassandraRestApi.sendAccelerationValues(capturedAcceleration);
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
                 if (!response.isSuccessful()) {
-                    Toast.makeText(getBaseContext(), getText(R.string.rest_error), Toast.LENGTH_LONG).show();
+                    Toast.makeText(getBaseContext(), getText(R.string.rest_error), Toast.LENGTH_SHORT).show();
                 }
             }
-
             @Override
             public void onFailure(Call<Void> call, Throwable t) {
-                Toast.makeText(getBaseContext(), getText(R.string.rest_failure), Toast.LENGTH_LONG).show();
+                Toast.makeText(getBaseContext(), getText(R.string.rest_failure) + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }

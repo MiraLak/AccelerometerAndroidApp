@@ -16,8 +16,9 @@ public class CassandraRestApiClient {
     public static Retrofit getClient(String baseUrl) {
 
         final OkHttpClient okHttpClient = new OkHttpClient.Builder()
-                .readTimeout(60, TimeUnit.SECONDS)
-                .connectTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(15, TimeUnit.SECONDS)
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .retryOnConnectionFailure(false)
                 .build();
 
         if (retrofit == null) {

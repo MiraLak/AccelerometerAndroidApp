@@ -17,7 +17,7 @@ public class ConfigurationActivity extends AppCompatActivity {
     public static final String MY_CONFIG = "myConfiguration";
     public static final String URL = "serverURL";
 
-    public static final String DEFAULT_URL = "http://192.168.1.28:8080/";
+    public static final String DEFAULT_URL = "http://localhost:8080/";
 
     private SharedPreferences sharedpreferences;
 
@@ -27,7 +27,6 @@ public class ConfigurationActivity extends AppCompatActivity {
         setContentView(R.layout.activity_configuration);
 
         sharedpreferences = getSharedPreferences(MY_CONFIG, Context.MODE_PRIVATE);
-
         String serverUrl = sharedpreferences.getString(ConfigurationActivity.URL, DEFAULT_URL);
 
         EditText serverUrlTextView = (EditText) findViewById(R.id.serverUrl);
@@ -38,11 +37,9 @@ public class ConfigurationActivity extends AppCompatActivity {
 
             SharedPreferences.Editor editor = sharedpreferences.edit();
             editor.putString(URL, serverUrlTextView.getText().toString());
-            editor.commit();
+            editor.apply();
 
-            Toast.makeText(ConfigurationActivity.this, getString(R.string.info_configuration_saved), Toast.LENGTH_LONG).show();
-
-
+            Toast.makeText(ConfigurationActivity.this, getString(R.string.info_configuration_saved), Toast.LENGTH_SHORT).show();
         });
     }
 }

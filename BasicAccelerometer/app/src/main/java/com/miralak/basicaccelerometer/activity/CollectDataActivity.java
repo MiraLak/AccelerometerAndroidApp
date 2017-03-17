@@ -40,7 +40,6 @@ import retrofit2.Response;
 
 public class CollectDataActivity extends AppCompatActivity implements SensorEventListener {
 
-    private static final String DEFAULT_URL = "http://localhost:8080";
     private String userID;
     private String selectedActivity;
     private Timer timer;
@@ -159,7 +158,7 @@ public class CollectDataActivity extends AppCompatActivity implements SensorEven
 
     private void initRestApi() {
         SharedPreferences sharedpreferences = getSharedPreferences(ConfigurationActivity.MY_CONFIG, Context.MODE_PRIVATE);
-        String restURL = sharedpreferences.getString(ConfigurationActivity.URL, DEFAULT_URL);
+        String restURL = sharedpreferences.getString(ConfigurationActivity.URL, ConfigurationActivity.DEFAULT_URL);
 
         cassandraRestApi = CassandraRestApiClient.getClient(restURL).create(CassandraRestApi.class);
     }
